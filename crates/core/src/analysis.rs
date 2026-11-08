@@ -17,7 +17,7 @@ pub struct ExtStat {
 pub fn extensions(root: &Node) -> Vec<ExtStat> {
     let mut map: HashMap<String, ExtStat> = HashMap::new();
     root.walk(Path::new(""), &mut |n, _, _| {
-        if !n.is_dir {
+        if !n.is_dir && !n.synthetic {
             let e = n.ext();
             let s = map.entry(e.clone()).or_insert_with(|| ExtStat {
                 ext: e,
@@ -108,7 +108,7 @@ pub fn ages(root: &Node, kind: DateKind, now: i64) -> Vec<AgeStat> {
         })
         .collect();
     root.walk(Path::new(""), &mut |n, _, _| {
-        if n.is_dir {
+        if n.is_dir || n.synthetic {
             return;
         }
         let t = match kind {
@@ -147,7 +147,7 @@ pub fn largest(root: &Node, base: &Path, n: usize) -> Vec<FileRef> {
     let mut seq = 0usize;
     let mut paths: HashMap<usize, (PathBuf, u64, i64, i64, bool)> = HashMap::new();
     root.walk(base, &mut |node, p, _| {
-        if node.is_dir {
+        if node.is_dir || node.synthetic {
             return;
         }
         if heap.len() < n {
@@ -211,7 +211,7 @@ pub struct OwnerStat {
 pub fn owners(root: &Node, base: &Path, cancel: &std::sync::atomic::AtomicBool) -> Vec<OwnerStat> {
     let mut files = Vec::new();
     root.walk(base, &mut |n, p, _| {
-        if !n.is_dir {
+        if !n.is_dir && !n.synthetic {
             files.push((p.to_path_buf(), n.size));
         }
     });

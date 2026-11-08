@@ -1,3 +1,14 @@
+## AtlasDisco 0.2.0 — Android
+
+- **Android 8+ app** (APK): same interface as the desktop, adapted to phones (folder tab, larger touch targets, system bars and on-screen keyboard)
+- "All files access" request, internal storage and SD cards in Locations, reports saved to Download/AtlasDisco
+- Total matches the system settings: space Android does not let any app read (installed apps, app data, caches) is shown as its own block
+- With "Usage access", that block is broken down per app (app, data and cache), like the system Files app
+- Informational items (no file operations) are shown in amber and excluded from searches, duplicates and largest files
+- Volume size and free space on Linux/macOS/Android (statvfs)
+
+**Downloads:** Android (.apk), Windows x64/ARM64 (.zip), macOS universal (.dmg), Linux x64/ARM64 (.deb, .tar.gz).
+
 ## AtlasDisco 0.1.0 — first public release
 
 Disk space analyzer for Windows, Linux and macOS (interface in Brazilian Portuguese).

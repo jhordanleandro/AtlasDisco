@@ -39,7 +39,9 @@ pub fn log(msg: &str) {
     }
 }
 
-fn with_env<R>(f: impl FnOnce(&mut JNIEnv, &JObject) -> jni::errors::Result<R>) -> Option<R> {
+pub(crate) fn with_env<R>(
+    f: impl FnOnce(&mut JNIEnv, &JObject) -> jni::errors::Result<R>,
+) -> Option<R> {
     let app = ANDROID.get()?;
     let vm = unsafe { JavaVM::from_raw(app.vm_as_ptr() as *mut jni::sys::JavaVM) }.ok()?;
     let mut env = vm.attach_current_thread().ok()?;
@@ -59,7 +61,7 @@ fn with_env<R>(f: impl FnOnce(&mut JNIEnv, &JObject) -> jni::errors::Result<R>) 
     }
 }
 
-fn sdk_int(env: &mut JNIEnv) -> jni::errors::Result<i32> {
+pub(crate) fn sdk_int(env: &mut JNIEnv) -> jni::errors::Result<i32> {
     env.get_static_field("android/os/Build$VERSION", "SDK_INT", "I")?
         .i()
 }
@@ -250,7 +252,7 @@ pub fn insets(ctx: &egui::Context) {
 }
 
 /// Executado a cada quadro, antes da área central.
-pub fn frame(ctx: &egui::Context, _app: &mut App, _acts: &mut Vec<Act>) {
+pub fn frame(ctx: &egui::Context, app: &mut App, _acts: &mut Vec<Act>) {
     // Teclado virtual acompanha o foco dos campos de texto.
     let wants = ctx.wants_keyboard_input();
     if wants != KEYBOARD.load(Relaxed) {
@@ -273,5 +275,35 @@ pub fn frame(ctx: &egui::Context, _app: &mut App, _acts: &mut Vec<Act>) {
             }
             ui.add_space(6.0);
         });
+        return;
+    }
+    // Detalha "[Apps, dados de apps e sistema]" por app assim que o "Acesso ao uso" existir.
+    let pending = app.scan.as_ref().is_some_and(|s| {
+        s.root
+            .children
+            .iter()
+            .any(|c| c.synthetic && c.children.is_empty())
+    });
+    if pending && app.apps_gen != app.gen {
+        if crate::android_apps::has_usage_access() {
+            if app.bg.is_none() {
+                app.load_app_sizes();
+            }
+        } else {
+            egui::TopBottomPanel::top("uso").show(ctx, |ui| {
+                ui.add_space(6.0);
+                ui.label(RichText::new("Quer ver quanto cada app ocupa (app, dados e cache)?").strong());
+                ui.label(RichText::new("O Android só informa isso com o \"Acesso ao uso\". O AtlasDisco lê apenas os tamanhos.").weak());
+                ui.horizontal_wrapped(|ui| {
+                    if ui.button("Conceder Acesso ao uso").clicked() {
+                        crate::android_apps::request_usage_access();
+                    }
+                    if ui.button("Agora não").clicked() {
+                        app.apps_gen = app.gen;
+                    }
+                });
+                ui.add_space(6.0);
+            });
+        }
     }
 }

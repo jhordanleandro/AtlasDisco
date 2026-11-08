@@ -50,6 +50,9 @@ pub struct Node {
     /// Link simbólico/junção não seguido.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub link: bool,
+    /// Item informativo, não é um arquivo/pasta real (ex.: espaço de apps no Android). Sem operações.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub synthetic: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -195,6 +198,7 @@ impl Node {
             hardlink_dup: self.hardlink_dup,
             link: self.link,
             error: self.error.clone(),
+            synthetic: self.synthetic,
             children: Vec::new(),
         }
     }

@@ -331,7 +331,7 @@ pub fn add_inaccessible(root: &mut Node, total: u64, free: u64) {
         is_dir: true,
         size: rest,
         alloc: rest,
-        error: Some("Apps instalados, dados privados dos apps, caches e Android/data: o Android não permite que outros apps leiam esta área.".into()),
+        synthetic: true,
         ..Default::default()
     });
     root.size += rest;
@@ -340,6 +340,81 @@ pub fn add_inaccessible(root: &mut Node, total: u64, free: u64) {
 }
 
 pub const INACCESSIBLE: &str = "[Apps, dados de apps e sistema]";
+
+/// Espaço de um app instalado, segundo as estatísticas do sistema (Android).
+#[derive(Clone, Debug, Default)]
+pub struct AppStorage {
+    pub label: String,
+    pub package: String,
+    /// APK e bibliotecas.
+    pub app: u64,
+    /// Dados do app, incluindo o cache.
+    pub data: u64,
+    pub cache: u64,
+}
+
+/// Detalha o bloco inacessível por app. O que sobra (sistema, outros usuários) vira "[Sistema e outros]".
+/// Se a soma dos apps passar do bloco (contagens do sistema se sobrepõem), o bloco cresce e o total acompanha.
+pub fn fill_apps(root: &mut Node, apps: &[AppStorage]) {
+    let Some(i) = root
+        .children
+        .iter()
+        .position(|c| c.synthetic && c.name == INACCESSIBLE)
+    else {
+        return;
+    };
+    let old = root.children[i].size;
+    let leaf = |name: &str, size: u64| Node {
+        name: name.into(),
+        size,
+        alloc: size,
+        synthetic: true,
+        ..Default::default()
+    };
+    let mut kids: Vec<Node> = apps
+        .iter()
+        .filter(|a| a.app + a.data > 0)
+        .map(|a| {
+            let mut n = Node {
+                name: format!("{} ({})", a.label, a.package),
+                is_dir: true,
+                synthetic: true,
+                children: vec![
+                    leaf("Aplicativo", a.app),
+                    leaf("Dados", a.data.saturating_sub(a.cache)),
+                    leaf("Cache", a.cache),
+                ],
+                ..Default::default()
+            };
+            n.children.retain(|c| c.size > 0);
+            n.size = a.app + a.data;
+            n.alloc = n.size;
+            n.files = n.children.len() as u64;
+            n
+        })
+        .collect();
+    let sum: u64 = kids.iter().map(|k| k.size).sum();
+    if old > sum {
+        kids.push(leaf("[Sistema e outros]", old - sum));
+    }
+    let new = sum.max(old);
+    let block = &mut root.children[i];
+    block.children = kids;
+    block.size = new;
+    block.alloc = new;
+    block.files = block
+        .children
+        .iter()
+        .map(|c| if c.is_dir { c.files } else { 1 })
+        .sum();
+    block.dirs = block.children.iter().filter(|c| c.is_dir).count() as u64;
+    let (files, dirs) = (block.files, block.dirs);
+    root.size += new - old;
+    root.alloc += new - old;
+    root.files += files;
+    root.dirs += dirs;
+    root.sort_by_size();
+}
 
 /// Monta uma árvore provisória com o que já terminou; pastas em andamento aparecem vazias e marcadas.
 pub fn partial_root(name: &str, part: &Partial) -> Node {
@@ -404,5 +479,58 @@ mod tests {
         };
         let s = scan(r, &opt, &Progress::default()).unwrap();
         assert_eq!(s.root.size, 100);
+    }
+}
+
+#[cfg(test)]
+mod apps_tests {
+    use super::*;
+
+    #[test]
+    fn bloco_de_apps() {
+        let mut root = Node {
+            name: "/storage/emulated/0".into(),
+            is_dir: true,
+            size: 100,
+            alloc: 100,
+            ..Default::default()
+        };
+        add_inaccessible(&mut root, 1000, 700); // usado 300, lido 100 → 200 inacessíveis
+        assert_eq!(root.size, 300);
+        let apps = vec![
+            AppStorage {
+                label: "Mapas".into(),
+                package: "a.mapas".into(),
+                app: 50,
+                data: 70,
+                cache: 20,
+            },
+            AppStorage {
+                label: "Vazio".into(),
+                package: "a.vazio".into(),
+                ..Default::default()
+            },
+        ];
+        fill_apps(&mut root, &apps);
+        let b = root
+            .children
+            .iter()
+            .find(|c| c.name == INACCESSIBLE)
+            .unwrap();
+        assert_eq!(b.size, 200);
+        assert_eq!(b.children.len(), 2); // Mapas + [Sistema e outros]
+        assert_eq!(b.children[0].size, 120);
+        assert_eq!(b.children[1].size, 80);
+        assert_eq!(root.size, 300);
+        // soma maior que o bloco: o total cresce
+        let big = vec![AppStorage {
+            label: "Grande".into(),
+            package: "g".into(),
+            app: 250,
+            data: 0,
+            cache: 0,
+        }];
+        fill_apps(&mut root, &big);
+        assert_eq!(root.size, 350);
     }
 }

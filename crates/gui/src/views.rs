@@ -153,6 +153,10 @@ fn tree_label(
     if n.size > 0 && n.cloud == n.size {
         text = text.italics().color(Color32::from_rgb(0x8a, 0x9b, 0xe8));
     }
+    // Item informativo (ex.: espaço dos apps no Android): âmbar, sem ações.
+    if n.synthetic {
+        text = text.color(Color32::from_rgb(0xe0, 0xa8, 0x3a));
+    }
     let resp = ui.selectable_label(app.sel.as_slice() == idx, text);
     let resp = resp.on_hover_text(hover_info(app, n));
     if resp.clicked() {
@@ -163,11 +167,16 @@ fn tree_label(
         }
     }
     let path = scan.path_of(idx);
-    resp.context_menu(|ui| item_menu(ui, &path, n.is_dir, Some(idx.to_vec()), acts));
+    if !n.synthetic {
+        resp.context_menu(|ui| item_menu(ui, &path, n.is_dir, Some(idx.to_vec()), acts));
+    }
 }
 
 fn hover_info(app: &App, n: &Node) -> String {
     let mut s = format!("Tamanho: {}\nAlocado: {}", app.sz(n.size), app.sz(n.alloc));
+    if n.synthetic {
+        s += "\nInformativo: espaço contado pelo sistema, que nenhum app pode abrir ou apagar daqui.";
+    }
     if n.cloud > 0 {
         s += &format!("\nSó na nuvem: {} (não ocupa este disco)", app.sz(n.cloud));
     }
@@ -589,19 +598,21 @@ fn details(app: &mut App, ui: &mut egui::Ui, scan: &Scan, node: &Node, acts: &mu
                                             let mut s = app.sel.clone();
                                             s.push(i);
                                             acts.push(Act::Select(s));
-                                        } else {
+                                        } else if !c.synthetic {
                                             acts.push(Act::Open(path.clone()));
                                         }
                                     }
-                                    r.context_menu(|ui| {
-                                        if is_sel && selected.len() > 1 {
-                                            menu_for(ui, &selected, false, None, acts);
-                                        } else {
-                                            let mut s = app.sel.clone();
-                                            s.push(i);
-                                            item_menu(ui, &path, c.is_dir, Some(s), acts);
-                                        }
-                                    });
+                                    if !c.synthetic {
+                                        r.context_menu(|ui| {
+                                            if is_sel && selected.len() > 1 {
+                                                menu_for(ui, &selected, false, None, acts);
+                                            } else {
+                                                let mut s = app.sel.clone();
+                                                s.push(i);
+                                                item_menu(ui, &path, c.is_dir, Some(s), acts);
+                                            }
+                                        });
+                                    }
                                 } else if num {
                                     ui.with_layout(
                                         egui::Layout::right_to_left(egui::Align::Center),
@@ -694,7 +705,9 @@ fn treemap_tab(app: &mut App, ui: &mut egui::Ui, scan: &Scan, node: &Node, acts:
                 }
             }
             let (is_dir, idx) = (n.map(|n| n.is_dir).unwrap_or(true), t.idx.clone());
-            resp.context_menu(|ui| item_menu(ui, &path, is_dir, Some(idx), acts));
+            if !n.is_some_and(|n| n.synthetic) {
+                resp.context_menu(|ui| item_menu(ui, &path, is_dir, Some(idx), acts));
+            }
         }
     }
 }

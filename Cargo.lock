@@ -368,7 +368,7 @@ dependencies = [
 
 [[package]]
 name = "atlasdisco"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "atlasdisco-core",
  "chrono",
@@ -384,7 +384,7 @@ dependencies = [
 
 [[package]]
 name = "atlasdisco-android"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "atlasdisco",
  "eframe",
@@ -393,7 +393,7 @@ dependencies = [
 
 [[package]]
 name = "atlasdisco-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "atlasdisco-core",
  "chrono",
@@ -404,7 +404,7 @@ dependencies = [
 
 [[package]]
 name = "atlasdisco-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",

@@ -2,6 +2,8 @@
 
 #[cfg(target_os = "android")]
 pub mod android;
+#[cfg(target_os = "android")]
+mod android_apps;
 mod config;
 /// No Android não há diálogos nativos de arquivo: este módulo imita a API do rfd usando Download/AtlasDisco.
 #[cfg(target_os = "android")]
@@ -114,6 +116,8 @@ enum BgResult {
     Dups(Vec<Vec<Hit>>),
     Ops(String, ops::Report, Vec<PathBuf>),
     Text(Result<String, String>),
+    #[cfg(target_os = "android")]
+    Apps(Vec<atlasdisco_core::scan::AppStorage>),
 }
 
 struct Bg {
@@ -246,6 +250,8 @@ pub struct App {
     sched: config::Sched,
     screenshot: Option<(PathBuf, u32)>,
     pub compact: bool,
+    /// Geração da varredura cujo espaço por app já foi lido (Android).
+    pub apps_gen: u64,
 }
 
 impl App {
@@ -319,6 +325,7 @@ impl App {
             sched: config::Sched::default(),
             screenshot: shot.map(|p| (p, 0)),
             compact: false,
+            apps_gen: u64::MAX,
         };
         // ATLASDISCO_ABA=n abre direto na aba n (usado nas capturas de tela de teste).
         if let Some(n) = std::env::var("ATLASDISCO_ABA")
@@ -400,6 +407,22 @@ impl App {
         }
         self.history = snapshot::history(&s.root_path);
         self.set_scan(s);
+    }
+
+    /// Android: lê o espaço de cada app em segundo plano e detalha o bloco inacessível.
+    #[cfg(target_os = "android")]
+    pub(crate) fn load_app_sizes(&mut self) {
+        let internal = self
+            .scan
+            .as_ref()
+            .is_some_and(|s| s.root_path == Path::new("/storage/emulated/0"));
+        if !internal || self.bg.is_some() {
+            return;
+        }
+        self.apps_gen = self.gen;
+        self.spawn_bg("Lendo o espaço de cada app", None, |_| {
+            BgResult::Apps(android_apps::app_storage())
+        });
     }
 
     fn set_scan(&mut self, s: Scan) {
@@ -712,6 +735,16 @@ impl App {
                                     )
                                 }
                             );
+                        }
+                        #[cfg(target_os = "android")]
+                        BgResult::Apps(a) => {
+                            if let Some(arc) = self.scan.as_mut() {
+                                atlasdisco_core::scan::fill_apps(&mut Arc::make_mut(arc).root, &a);
+                                self.gen += 1;
+                                self.apps_gen = self.gen;
+                                self.caches = Caches::default();
+                                self.status = format!("Espaço de {} apps detalhado em [Apps, dados de apps e sistema].", a.len());
+                            }
                         }
                         BgResult::Text(r) => {
                             self.status = match r {

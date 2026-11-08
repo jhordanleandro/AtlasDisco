@@ -165,8 +165,8 @@ pub fn search(
     let dk = c.date_kind();
     let mut cand = Vec::new();
     root.walk(base, &mut |n, p, lvl| {
-        if lvl == 0 {
-            return; // a própria raiz não entra
+        if lvl == 0 || n.synthetic {
+            return; // a própria raiz e itens informativos não entram
         }
         match c.kind {
             Kind::Files if n.is_dir => return,
@@ -281,7 +281,13 @@ pub fn duplicates(
     let mut by_key: HashMap<(u64, String), Vec<Hit>> = HashMap::new();
     root.walk(base, &mut |n, p, lvl| {
         // Arquivos só na nuvem ficam de fora: calcular o hash baixaria o arquivo inteiro.
-        if !n.is_dir && !n.link && !n.hardlink_dup && n.cloud == 0 && n.size >= min_size.max(1) {
+        if !n.is_dir
+            && !n.link
+            && !n.hardlink_dup
+            && n.cloud == 0
+            && !n.synthetic
+            && n.size >= min_size.max(1)
+        {
             let key = if mode == DupMode::NameSize {
                 n.name.to_lowercase()
             } else {
