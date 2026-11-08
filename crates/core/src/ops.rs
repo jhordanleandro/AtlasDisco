@@ -17,6 +17,16 @@ impl Report {
     }
 }
 
+#[cfg(target_os = "android")]
+pub fn to_trash(paths: &[PathBuf]) -> Report {
+    let mut r = Report::default();
+    for p in paths {
+        r.fail(p, "o Android não tem lixeira para arquivos; use Excluir");
+    }
+    r
+}
+
+#[cfg(not(target_os = "android"))]
 pub fn to_trash(paths: &[PathBuf]) -> Report {
     let mut r = Report::default();
     for p in paths {

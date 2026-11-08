@@ -1,0 +1,19 @@
+[package]
+name = "atlasdisco-android"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "AtlasDisco for Android (NativeActivity library)"
+publish = false
+
+[lib]
+name = "atlasdisco"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+winit = { version = "0.30", default-features = false, features = ["android-native-activity"] }
+atlasdisco = { path = "../gui" }
+eframe = { version = "0.31", default-features = false, features = ["default_fonts", "glow", "persistence", "android-native-activity"] }

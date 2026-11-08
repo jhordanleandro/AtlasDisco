@@ -103,6 +103,9 @@ pub fn scan(path: &Path, opt: &ScanOptions, progress: &Progress) -> std::io::Res
     root.name = root_path.to_string_lossy().into_owned();
     root.sort_by_size();
     let (volume_total, volume_free) = platform::volume_space(&root_path);
+    if cfg!(target_os = "android") && root_path == Path::new("/storage/emulated/0") {
+        add_inaccessible(&mut root, volume_total, volume_free);
+    }
     let errors = std::mem::take(&mut *progress.errors.lock().unwrap());
     Ok(Scan {
         format: Scan::FORMAT,
@@ -313,6 +316,30 @@ fn scan_dir(path: &Path, md: &fs::Metadata, ctx: &Ctx, depth: usize) -> Node {
     }
     dir
 }
+
+/// Android: o armazenamento interno é uma partição só, mas apps comuns enxergam apenas a área compartilhada.
+/// O restante do espaço usado (apps instalados, dados privados, caches, Android/data) entra como um bloco
+/// próprio, para o total bater com as Configurações do aparelho.
+pub fn add_inaccessible(root: &mut Node, total: u64, free: u64) {
+    let used = total.saturating_sub(free);
+    let rest = used.saturating_sub(root.alloc.max(root.size));
+    if rest == 0 {
+        return;
+    }
+    root.children.push(Node {
+        name: INACCESSIBLE.into(),
+        is_dir: true,
+        size: rest,
+        alloc: rest,
+        error: Some("Apps instalados, dados privados dos apps, caches e Android/data: o Android não permite que outros apps leiam esta área.".into()),
+        ..Default::default()
+    });
+    root.size += rest;
+    root.alloc += rest;
+    root.sort_by_size();
+}
+
+pub const INACCESSIBLE: &str = "[Apps, dados de apps e sistema]";
 
 /// Monta uma árvore provisória com o que já terminou; pastas em andamento aparecem vazias e marcadas.
 pub fn partial_root(name: &str, part: &Partial) -> Node {

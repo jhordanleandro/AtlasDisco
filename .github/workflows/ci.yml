@@ -33,3 +33,20 @@ jobs:
         run: |
           cargo build --release -p atlasdisco-cli
           powershell -NoProfile -ExecutionPolicy Bypass -File test/e2e.ps1
+
+  android:
+    name: Android (compilação)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android
+      - run: cargo install cargo-ndk --locked
+      - name: Compilar a biblioteca do app
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          cargo ndk -t arm64-v8a -P 26 build --release -p atlasdisco-android

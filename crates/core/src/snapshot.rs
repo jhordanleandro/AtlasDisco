@@ -221,6 +221,10 @@ pub fn locate<'a>(scan: &'a Scan, path: &Path) -> Option<&'a Node> {
 
 /// Pasta de dados. Modo portátil: `portatil.txt` ao lado do executável → `dados\` ali mesmo.
 pub fn data_dir() -> PathBuf {
+    // Definida pelo app Android (pasta privada) ou por quem quiser escolher outro lugar.
+    if let Some(d) = std::env::var_os("ATLASDISCO_DATA") {
+        return PathBuf::from(d);
+    }
     if let Ok(exe) = std::env::current_exe() {
         if let Some(d) = exe.parent() {
             if d.join("portatil.txt").exists() {

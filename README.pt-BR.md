@@ -3,7 +3,7 @@
 <h1 align="center">AtlasDisco</h1>
 
 <p align="center">
-  <b>Veja o que está enchendo o seu disco.</b> Analisador de espaço em disco rápido e de código aberto para Windows, Linux e macOS.<br>
+  <b>Veja o que está enchendo o seu disco.</b> Analisador de espaço em disco rápido e de código aberto para Windows, Linux, macOS e Android.<br>
   <a href="https://jhordanleandro.github.io/AtlasDisco">Site</a> ·
   <a href="https://github.com/jhordanleandro/AtlasDisco/releases/latest">Baixar</a> ·
   <a href="README.md">English</a>
@@ -28,7 +28,7 @@
 
 ## Baixar
 
-Os pacotes de cada sistema ficam na [última versão](https://github.com/jhordanleandro/AtlasDisco/releases/latest): Windows (x64 e ARM), macOS (universal), Linux (.deb e .tar.gz, x64 e ARM64). Android está planejado.
+Os pacotes de cada sistema ficam na [última versão](https://github.com/jhordanleandro/AtlasDisco/releases/latest): Windows (x64 e ARM), macOS (universal), Linux (.deb e .tar.gz, x64 e ARM64) e Android 8+ ([APK](https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-android.apk); na primeira abertura, conceda “acesso a todos os arquivos”).
 
 Os executáveis ainda não têm assinatura digital:
 - **Windows**: se o SmartScreen avisar, clique em *Mais informações → Executar assim mesmo*.

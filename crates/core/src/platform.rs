@@ -527,9 +527,18 @@ mod imp {
             .max(512)
     }
 
-    pub fn volume_space(_path: &Path) -> (u64, u64) {
-        // Sem libc/statvfs nesta versão.
-        (0, 0)
+    /// (total, livre para o usuário) do sistema de arquivos que contém `path`.
+    pub fn volume_space(path: &Path) -> (u64, u64) {
+        use std::os::unix::ffi::OsStrExt;
+        let Ok(c) = std::ffi::CString::new(path.as_os_str().as_bytes()) else {
+            return (0, 0);
+        };
+        let mut st: libc::statvfs = unsafe { std::mem::zeroed() };
+        if unsafe { libc::statvfs(c.as_ptr(), &mut st) } != 0 {
+            return (0, 0);
+        }
+        let f = st.f_frsize as u64;
+        (st.f_blocks as u64 * f, st.f_bavail as u64 * f)
     }
 
     pub fn file_id(path: &Path) -> Option<FileId> {
@@ -590,6 +599,7 @@ mod imp {
         ])
     }
 
+    #[cfg(not(target_os = "android"))]
     pub fn volumes() -> Vec<super::Location> {
         drives()
             .into_iter()
@@ -599,6 +609,30 @@ mod imp {
                 kind: super::LocKind::Disk,
             })
             .collect()
+    }
+
+    /// Android: armazenamento interno compartilhado e cartões SD/pendrives em /storage.
+    #[cfg(target_os = "android")]
+    pub fn volumes() -> Vec<super::Location> {
+        use super::{LocKind, Location};
+        let mut v = vec![Location {
+            path: "/storage/emulated/0".into(),
+            label: "Armazenamento interno".into(),
+            kind: LocKind::Disk,
+        }];
+        if let Ok(rd) = std::fs::read_dir("/storage") {
+            for e in rd.flatten() {
+                let name = e.file_name().to_string_lossy().into_owned();
+                if name != "emulated" && name != "self" {
+                    v.push(Location {
+                        path: format!("/storage/{name}"),
+                        label: "Cartão SD / USB".into(),
+                        kind: LocKind::Removable,
+                    });
+                }
+            }
+        }
+        v
     }
 
     pub fn drives() -> Vec<String> {

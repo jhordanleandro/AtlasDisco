@@ -19,10 +19,15 @@ md-5 = "0.10"
 rust_xlsxwriter = "0.80"
 rusqlite = { version = "0.32", features = ["bundled"] }
 dirs = "5"
-trash = "5"
 ureq = "2"
 hmac = "0.12"
 base64 = "0.22"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+trash = "5"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = [

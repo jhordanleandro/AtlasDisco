@@ -1,5 +1,7 @@
 //! Árvore de pastas e abas da área central.
 
+#[cfg(target_os = "android")]
+use crate::rfd;
 use crate::treemap::{self, Measure};
 use crate::{Act, App, Col, Tab};
 use atlasdisco_core::analysis::{self, DateKind};
@@ -292,6 +294,7 @@ pub fn central(app: &mut App, ui: &mut egui::Ui, scan: &Scan, acts: &mut Vec<Act
     }
     let base = scan.path_of(&app.sel);
     match app.tab {
+        Tab::Folders => tree(app, ui, scan, acts),
         Tab::Details => details(app, ui, scan, node, acts),
         Tab::Treemap => treemap_tab(app, ui, scan, node, acts),
         Tab::Chart => chart_tab(app, ui, node),
@@ -500,123 +503,133 @@ fn details(app: &mut App, ui: &mut egui::Ui, scan: &Scan, node: &Node, acts: &mu
             }
         }
         ui.label(
-            RichText::new(
-                "Ctrl+clique seleciona vários · duplo clique abre a pasta · botão direito: ações",
-            )
+            RichText::new(if app.compact {
+                "Toque duplo abre · toque longo: ações"
+            } else {
+                "Ctrl+clique seleciona vários · duplo clique abre a pasta · botão direito: ações"
+            })
             .weak(),
         );
     });
 
     let mut owners = std::mem::take(&mut app.caches.owners_of);
-    let mut table = TableBuilder::new(ui)
-        .striped(true)
-        .resizable(true)
-        .cell_layout(egui::Layout::left_to_right(egui::Align::Center));
-    for (k, &c) in cols.iter().enumerate() {
-        table = table.column(if k == 0 {
-            Column::initial(320.0).at_least(120.0).clip(true)
-        } else {
-            Column::initial(if c == 6 || c == 7 || c == 8 {
-                120.0
-            } else {
-                90.0
-            })
-            .at_least(40.0)
-            .clip(true)
-        });
-    }
-    table
-        .header(ROW + 2.0, |mut h| {
-            for &c in &cols {
-                h.col(|ui| {
-                    let mut label = Col::ALL[c].1.to_string();
-                    if app.sort_col == c {
-                        label += if app.sort_asc { " ⬆" } else { " ⬇" };
-                    }
-                    if ui
-                        .add(egui::Button::new(RichText::new(label).strong()).frame(false))
-                        .clicked()
-                    {
-                        if app.sort_col == c {
-                            app.sort_asc = !app.sort_asc;
-                        } else {
-                            app.sort_col = c;
-                            app.sort_asc = c == 0;
-                        }
-                    }
+    // Em tela estreita, a tabela rola na horizontal.
+    egui::ScrollArea::horizontal()
+        .id_salt("detalhes-h")
+        .show(ui, |ui| {
+            let mut table = TableBuilder::new(ui)
+                .striped(true)
+                .resizable(true)
+                .cell_layout(egui::Layout::left_to_right(egui::Align::Center));
+            for (k, &c) in cols.iter().enumerate() {
+                table = table.column(if k == 0 {
+                    Column::initial(320.0).at_least(120.0).clip(true)
+                } else {
+                    Column::initial(if c == 6 || c == 7 || c == 8 {
+                        120.0
+                    } else {
+                        90.0
+                    })
+                    .at_least(40.0)
+                    .clip(true)
                 });
             }
-        })
-        .body(|body| {
-            body.rows(ROW, order.len(), |mut row| {
-                let i = order[row.index()];
-                let c = &node.children[i];
-                let path = base.join(&c.name);
-                let is_sel = app.detail_sel.contains(&i);
-                row.set_selected(is_sel);
-                for (k, &col) in cols.iter().enumerate() {
-                    let (text, num) =
-                        cell_text(app, Col::ALL[col].0, c, parent, &path, &mut owners);
-                    row.col(|ui| {
-                        if k == 0 {
-                            let mut rt = RichText::new(text);
-                            if c.attrs & atlasdisco_core::model::ATTR_COMPRESSED != 0 {
-                                rt = rt.color(Color32::from_rgb(0x4a, 0x90, 0xe2));
+            table
+                .header(ROW + 2.0, |mut h| {
+                    for &c in &cols {
+                        h.col(|ui| {
+                            let mut label = Col::ALL[c].1.to_string();
+                            if app.sort_col == c {
+                                label += if app.sort_asc { " ⬆" } else { " ⬇" };
                             }
-                            let r = ui.add(egui::Label::new(rt).sense(Sense::click()).truncate());
-                            if r.clicked() {
-                                if ui.input(|i| i.modifiers.command) {
-                                    if !app.detail_sel.remove(&i) {
-                                        app.detail_sel.insert(i);
+                            if ui
+                                .add(egui::Button::new(RichText::new(label).strong()).frame(false))
+                                .clicked()
+                            {
+                                if app.sort_col == c {
+                                    app.sort_asc = !app.sort_asc;
+                                } else {
+                                    app.sort_col = c;
+                                    app.sort_asc = c == 0;
+                                }
+                            }
+                        });
+                    }
+                })
+                .body(|body| {
+                    body.rows(ROW, order.len(), |mut row| {
+                        let i = order[row.index()];
+                        let c = &node.children[i];
+                        let path = base.join(&c.name);
+                        let is_sel = app.detail_sel.contains(&i);
+                        row.set_selected(is_sel);
+                        for (k, &col) in cols.iter().enumerate() {
+                            let (text, num) =
+                                cell_text(app, Col::ALL[col].0, c, parent, &path, &mut owners);
+                            row.col(|ui| {
+                                if k == 0 {
+                                    let mut rt = RichText::new(text);
+                                    if c.attrs & atlasdisco_core::model::ATTR_COMPRESSED != 0 {
+                                        rt = rt.color(Color32::from_rgb(0x4a, 0x90, 0xe2));
                                     }
+                                    let r = ui
+                                        .add(egui::Label::new(rt).sense(Sense::click()).truncate());
+                                    if r.clicked() {
+                                        if ui.input(|i| i.modifiers.command) {
+                                            if !app.detail_sel.remove(&i) {
+                                                app.detail_sel.insert(i);
+                                            }
+                                        } else {
+                                            app.detail_sel.clear();
+                                            app.detail_sel.insert(i);
+                                        }
+                                    }
+                                    if r.double_clicked() {
+                                        if c.is_dir && !c.link {
+                                            let mut s = app.sel.clone();
+                                            s.push(i);
+                                            acts.push(Act::Select(s));
+                                        } else {
+                                            acts.push(Act::Open(path.clone()));
+                                        }
+                                    }
+                                    r.context_menu(|ui| {
+                                        if is_sel && selected.len() > 1 {
+                                            menu_for(ui, &selected, false, None, acts);
+                                        } else {
+                                            let mut s = app.sel.clone();
+                                            s.push(i);
+                                            item_menu(ui, &path, c.is_dir, Some(s), acts);
+                                        }
+                                    });
+                                } else if num {
+                                    ui.with_layout(
+                                        egui::Layout::right_to_left(egui::Align::Center),
+                                        |ui| ui.label(text),
+                                    );
                                 } else {
-                                    app.detail_sel.clear();
-                                    app.detail_sel.insert(i);
-                                }
-                            }
-                            if r.double_clicked() {
-                                if c.is_dir && !c.link {
-                                    let mut s = app.sel.clone();
-                                    s.push(i);
-                                    acts.push(Act::Select(s));
-                                } else {
-                                    acts.push(Act::Open(path.clone()));
-                                }
-                            }
-                            r.context_menu(|ui| {
-                                if is_sel && selected.len() > 1 {
-                                    menu_for(ui, &selected, false, None, acts);
-                                } else {
-                                    let mut s = app.sel.clone();
-                                    s.push(i);
-                                    item_menu(ui, &path, c.is_dir, Some(s), acts);
+                                    ui.label(text);
                                 }
                             });
-                        } else if num {
-                            ui.with_layout(
-                                egui::Layout::right_to_left(egui::Align::Center),
-                                |ui| ui.label(text),
-                            );
-                        } else {
-                            ui.label(text);
                         }
                     });
-                }
-            });
+                });
         });
     app.caches.owners_of = owners;
 }
 
 fn treemap_tab(app: &mut App, ui: &mut egui::Ui, scan: &Scan, node: &Node, acts: &mut Vec<Act>) {
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.label("Nível de detalhe");
         ui.add(egui::Slider::new(&mut app.cfg.treemap_depth, 1..=12));
         ui.checkbox(&mut app.tm_files, "Arquivos individuais");
         ui.checkbox(&mut app.tm_hierarchy, "Hierarquia");
         ui.label(
-            RichText::new(
-                "Clique: destacar · duplo clique: entrar na pasta · botão direito: ações",
-            )
+            RichText::new(if app.compact {
+                "Toque duplo entra na pasta · toque longo: ações"
+            } else {
+                "Clique: destacar · duplo clique: entrar na pasta · botão direito: ações"
+            })
             .weak(),
         );
     });

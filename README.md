@@ -3,7 +3,7 @@
 <h1 align="center">AtlasDisco</h1>
 
 <p align="center">
-  <b>See what is filling your disk.</b> A fast, open source disk space analyzer for Windows, Linux and macOS.<br>
+  <b>See what is filling your disk.</b> A fast, open source disk space analyzer for Windows, Linux, macOS and Android.<br>
   <a href="https://jhordanleandro.github.io/AtlasDisco">Website</a> ·
   <a href="https://github.com/jhordanleandro/AtlasDisco/releases/latest">Download</a> ·
   <a href="README.pt-BR.md">Português</a>
@@ -37,7 +37,7 @@ The interface is currently in Brazilian Portuguese; translations are welcome.
 | macOS 11+ (Apple Silicon and Intel) | [AtlasDisco-macos-universal.dmg](https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-macos-universal.dmg) |
 | Linux x64 (Debian/Ubuntu) | [.deb](https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-linux-x64.deb) · [.tar.gz](https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-linux-x64.tar.gz) |
 | Linux ARM64 | [.deb](https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-linux-arm64.deb) · [.tar.gz](https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-linux-arm64.tar.gz) |
-| Android | planned |
+| Android 8+ | [AtlasDisco-android.apk](https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-android.apk) (grant “all files access” on first launch) |
 
 The binaries are not code-signed yet:
 - **Windows**: SmartScreen may show "Windows protected your PC"; click *More info → Run anyway*. The zip is portable (`portatil.txt` keeps settings next to the program; delete it to use the user profile).
@@ -72,7 +72,6 @@ Project layout: `crates/core` (scanning, analysis, search, duplicates, snapshots
 
 ## Roadmap
 
-- Android app
 - Remote sources: Linux over SSH, Amazon S3 and compatibles, Azure Blob, WebDAV (core implemented, UI pending)
 - NTFS permissions view (core implemented, UI pending)
 - Live results while scanning (core implemented, UI pending)

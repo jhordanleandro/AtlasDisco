@@ -148,8 +148,46 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$TAG" AtlasDisco-macos-universal.dmg AtlasDisco-macos-universal-cli.tar.gz --clobber
 
+  android:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android
+      - name: SDK e NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "ndk;29.0.14206865" >/dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
+          cargo install cargo-ndk --locked
+      - name: Chave de assinatura
+        env:
+          KS_B64: ${{ secrets.ATLASDISCO_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KS_B64" ]; then echo "::error::Segredo ATLASDISCO_KEYSTORE_B64 ausente; o APK de release precisa da chave fixa."; exit 1; fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ATLASDISCO_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+      - name: Montar APK
+        env:
+          ATLASDISCO_KEYSTORE_PASS: ${{ secrets.ATLASDISCO_KEYSTORE_PASS }}
+          ATLASDISCO_KEY_ALIAS: ${{ secrets.ATLASDISCO_KEY_ALIAS }}
+        run: python3 scripts/build_apk.py --out AtlasDisco-android.apk
+      - name: Anexar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" AtlasDisco-android.apk --clobber
+
   publish:
-    needs: [windows, linux, macos]
+    needs: [windows, linux, macos, android]
     if: always()
     runs-on: ubuntu-latest
     steps:
