@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>AtlasDisco</title>
+  <rect x="8" y="8" width="240" height="240" rx="48" fill="#141a24"/>
+  <g stroke="#141a24" stroke-width="6">
+    <rect x="36" y="36" width="104" height="120" rx="10" fill="#3f6fd6"/>
+    <rect x="140" y="36" width="80" height="64" rx="10" fill="#d94f4f"/>
+    <rect x="140" y="100" width="80" height="56" rx="10" fill="#3b9e5f"/>
+    <rect x="36" y="156" width="64" height="64" rx="10" fill="#e08e2b"/>
+    <rect x="100" y="156" width="72" height="64" rx="10" fill="#8e5cc9"/>
+    <rect x="172" y="156" width="48" height="64" rx="10" fill="#2aa6b5"/>
+  </g>
+</svg>

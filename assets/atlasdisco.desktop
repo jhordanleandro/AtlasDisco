@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=AtlasDisco
+GenericName=Disk Space Analyzer
+GenericName[pt_BR]=Analisador de espaço em disco
+Comment=See what is filling your disk: tree, treemap, duplicates and reports
+Comment[pt_BR]=Veja o que ocupa o seu disco: árvore, mapa, duplicados e relatórios
+Exec=atlasdisco %f
+Icon=atlasdisco
+Terminal=false
+Categories=Utility;System;Filesystem;
+Keywords=disk;space;usage;treemap;duplicates;storage;
+MimeType=inode/directory;

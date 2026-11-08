@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AtlasDisco — analisador de espaço em disco open source</title>
+<meta name="description" content="Veja o que está enchendo o seu disco. Analisador de espaço em disco gratuito e de código aberto para Windows, Linux e macOS: mapa de árvore, duplicados, relatórios e nuvem separada.">
+<meta property="og:title" content="AtlasDisco">
+<meta property="og:description" content="Analisador de espaço em disco gratuito e open source para Windows, Linux e macOS.">
+<meta property="og:image" content="img/treemap.png">
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<style>
+:root{
+  --bg:#0f141c;--bg2:#161d28;--card:#1b2431;--line:#2a3443;--text:#e7ecf3;--muted:#9aa7b8;
+  --accent:#4f8cff;--accent2:#7a5cff;--ok:#3b9e5f;--radius:14px;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){--bg:#f6f8fb;--bg2:#ffffff;--card:#ffffff;--line:#e2e7ef;--text:#141a24;--muted:#5b6777;--accent:#2f6fe8;--accent2:#6a4de0}
+}
+:root[data-theme="light"]{--bg:#f6f8fb;--bg2:#ffffff;--card:#ffffff;--line:#e2e7ef;--text:#141a24;--muted:#5b6777;--accent:#2f6fe8;--accent2:#6a4de0}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav{display:flex;align-items:center;gap:18px;height:60px}
+nav .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);font-size:18px}
+nav .brand img{width:28px;height:28px}
+nav .links{margin-left:auto;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+nav .links a{color:var(--muted);font-size:15px}
+.lang{background:none;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:4px 10px;cursor:pointer;font:inherit;font-size:14px}
+.hero{padding:72px 0 40px;text-align:center}
+.hero h1{font-size:clamp(34px,6vw,58px);line-height:1.08;margin:0 0 16px;letter-spacing:-.02em}
+.hero h1 span{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{font-size:clamp(17px,2.2vw,21px);color:var(--muted);max-width:720px;margin:0 auto 28px}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:13px 22px;border-radius:12px;font-weight:600;border:1px solid var(--line);color:var(--text);background:var(--card)}
+.btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));border:0;color:#fff}
+.btn:hover{text-decoration:none;filter:brightness(1.08)}
+.small{font-size:14px;color:var(--muted)}
+.shot{margin:44px auto 0;border-radius:var(--radius);border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden;max-width:1100px}
+.shot img{display:block;width:100%;height:auto}
+section{padding:64px 0}
+section h2{font-size:clamp(26px,3.5vw,36px);margin:0 0 10px;text-align:center}
+section .sub{color:var(--muted);text-align:center;max-width:680px;margin:0 auto 36px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.card h3{margin:6px 0 6px;font-size:18px}
+.card p{margin:0;color:var(--muted);font-size:15px}
+.dot{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px}
+.tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+.tabs button{background:var(--card);border:1px solid var(--line);color:var(--text);padding:8px 14px;border-radius:999px;cursor:pointer;font:inherit;font-size:15px}
+.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.gallery img{width:100%;border-radius:var(--radius);border:1px solid var(--line);display:none}
+.gallery img.on{display:block}
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.dl .card{display:flex;flex-direction:column;gap:10px}
+.dl .card.me{outline:2px solid var(--accent)}
+.dl .card a.btn{justify-content:center}
+.dl .tag{font-size:12px;color:#fff;background:var(--accent);border-radius:999px;padding:2px 8px;align-self:flex-start}
+.soon{opacity:.7}
+pre{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto;font-size:14px;line-height:1.5}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-weight:600}
+td.y{color:var(--ok);font-weight:700}
+footer{border-top:1px solid var(--line);padding:32px 0;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
+[data-en]{display:none}
+html[lang="en"] [data-pt]{display:none}
+html[lang="en"] [data-en]{display:revert}
+@media (max-width:640px){nav .links a.hide-sm{display:none}.hero{padding-top:48px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="#"><img src="img/icon.svg" alt="">AtlasDisco</a>
+      <div class="links">
+        <a class="hide-sm" href="#recursos"><span data-pt>Recursos</span><span data-en>Features</span></a>
+        <a class="hide-sm" href="#baixar"><span data-pt>Baixar</span><span data-en>Download</span></a>
+        <a href="https://github.com/jhordanleandro/AtlasDisco">GitHub</a>
+        <button class="lang" id="lang" type="button" aria-label="Idioma / Language">EN</button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <h1><span data-pt>Veja o que está <span>enchendo o seu disco</span></span><span data-en>See what is <span>filling your disk</span></span></h1>
+    <p class="lead">
+      <span data-pt>Analisador de espaço em disco gratuito e de código aberto. Mapa de árvore, duplicados, buscas, relatórios e arquivos da nuvem separados do disco físico.</span>
+      <span data-en>A free and open source disk space analyzer. Treemap, duplicates, search, reports, and cloud files kept apart from your physical disk.</span>
+    </p>
+    <div class="cta">
+      <a class="btn primary" id="main-dl" href="#baixar"><span data-pt>Baixar</span><span data-en>Download</span> <span id="main-os"></span></a>
+      <a class="btn" href="https://github.com/jhordanleandro/AtlasDisco">★ <span data-pt>Código no GitHub</span><span data-en>Source on GitHub</span></a>
+    </div>
+    <p class="small"><span data-pt>Windows · Linux · macOS · Licença MIT/Apache-2.0</span><span data-en>Windows · Linux · macOS · MIT/Apache-2.0 license</span></p>
+    <div class="shot"><img src="img/treemap.png" width="1360" height="840" alt="AtlasDisco: mapa de árvore de um disco"></div>
+  </div>
+
+  <section id="recursos">
+    <div class="wrap">
+      <h2><span data-pt>Tudo o que um analisador profissional faz</span><span data-en>Everything a professional analyzer does</span></h2>
+      <p class="sub"><span data-pt>Sem licença, sem cadastro, sem anúncios.</span><span data-en>No license keys, no sign-up, no ads.</span></p>
+      <div class="grid">
+        <div class="card"><div class="dot" style="background:#3f6fd6">⚡</div><h3><span data-pt>Varredura rápida</span><span data-en>Fast scanning</span></h3><p><span data-pt>Paralela em todos os núcleos, caminhos longos, compartilhamentos de rede, compressão NTFS e hardlinks contados uma vez.</span><span data-en>Uses every core; long paths, network shares, NTFS compression and hardlinks counted once.</span></p></div>
+        <div class="card"><div class="dot" style="background:#8a9be8">☁</div><h3><span data-pt>Nuvem separada</span><span data-en>Cloud kept apart</span></h3><p><span data-pt>Arquivos sob demanda do OneDrive aparecem à parte e não somam no disco. Nada é baixado sem querer.</span><span data-en>OneDrive on-demand files are shown separately and don't count as disk usage. Nothing gets downloaded by accident.</span></p></div>
+        <div class="card"><div class="dot" style="background:#d94f4f">▦</div><h3><span data-pt>Mapa de árvore</span><span data-en>Treemap</span></h3><p><span data-pt>Os maiores blocos saltam aos olhos. Árvore com barras, pizza, tipos de arquivo e idade.</span><span data-en>The biggest blocks jump out. Tree with bars, pie charts, file types and age.</span></p></div>
+        <div class="card"><div class="dot" style="background:#3b9e5f">⧉</div><h3><span data-pt>Duplicados</span><span data-en>Duplicates</span></h3><p><span data-pt>Por SHA-256 ou MD5, com marcação automática e troca por hardlinks para liberar espaço sem perder nada.</span><span data-en>SHA-256 or MD5, auto-marking, and hardlink replacement to free space without losing anything.</span></p></div>
+        <div class="card"><div class="dot" style="background:#e08e2b">⌕</div><h3><span data-pt>Busca avançada</span><span data-en>Advanced search</span></h3><p><span data-pt>Nome, tamanho, datas, caminhos longos e texto dentro dos arquivos. Modelos salvos e ações em massa.</span><span data-en>Name, size, dates, long paths and text inside files. Saved templates and bulk actions.</span></p></div>
+        <div class="card"><div class="dot" style="background:#2aa6b5">⇅</div><h3><span data-pt>Relatórios e histórico</span><span data-en>Reports and history</span></h3><p><span data-pt>Excel, PDF, HTML, CSV, SQLite. Instantâneos e comparação mostram onde o espaço cresceu.</span><span data-en>Excel, PDF, HTML, CSV, SQLite. Snapshots and comparisons show where space grew.</span></p></div>
+        <div class="card"><div class="dot" style="background:#7a9a2f">⌘</div><h3><span data-pt>Linha de comando</span><span data-en>Command line</span></h3><p><span data-pt>Varreduras agendadas, relatórios por e-mail e scripts com o <code>atlasdisco-cli</code>.</span><span data-en>Scheduled scans, e-mailed reports and scripting with <code>atlasdisco-cli</code>.</span></p></div>
+        <div class="card"><div class="dot" style="background:#b03a8c">⧗</div><h3><span data-pt>Leve e portátil</span><span data-en>Light and portable</span></h3><p><span data-pt>Um único executável, sem instalador no Windows. Roda direto de um pendrive.</span><span data-en>A single executable, no installer on Windows. Runs straight from a USB stick.</span></p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2><span data-pt>Por dentro</span><span data-en>A look inside</span></h2>
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-img="treemap"><span data-pt>Mapa</span><span data-en>Treemap</span></button>
+        <button role="tab" aria-selected="false" data-img="details"><span data-pt>Detalhes</span><span data-en>Details</span></button>
+        <button role="tab" aria-selected="false" data-img="types"><span data-pt>Tipos de arquivo</span><span data-en>File types</span></button>
+      </div>
+      <div class="gallery">
+        <img class="on" id="g-treemap" src="img/treemap.png" width="1360" height="840" alt="Mapa de árvore" loading="lazy">
+        <img id="g-details" src="img/details.png" width="1360" height="840" alt="Detalhes" loading="lazy">
+        <img id="g-types" src="img/types.png" width="1360" height="840" alt="Tipos de arquivo" loading="lazy">
+      </div>
+      <p class="small" style="text-align:center"><span data-pt>Capturas de um disco de demonstração.</span><span data-en>Screenshots of a demo disk.</span></p>
+    </div>
+  </section>
+
+  <section id="baixar">
+    <div class="wrap">
+      <h2><span data-pt>Baixar</span><span data-en>Download</span></h2>
+      <p class="sub"><span data-pt>Versão mais recente, direto das Releases do GitHub.</span><span data-en>Latest version, straight from GitHub Releases.</span></p>
+      <div class="dl">
+        <div class="card" data-os="windows">
+          <h3>Windows</h3><p class="small">Windows 10/11 · <span data-pt>portátil (.zip)</span><span data-en>portable (.zip)</span></p>
+          <a class="btn primary" href="https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-windows-x64.zip">x64</a>
+          <a class="btn" href="https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-windows-arm64.zip">ARM64</a>
+        </div>
+        <div class="card" data-os="mac">
+          <h3>macOS</h3><p class="small">macOS 11+ · Apple Silicon &amp; Intel</p>
+          <a class="btn primary" href="https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-macos-universal.dmg">.dmg <span data-pt>(universal)</span><span data-en>(universal)</span></a>
+          <a class="btn" href="https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-macos-universal-cli.tar.gz"><span data-pt>Só linha de comando</span><span data-en>Command line only</span></a>
+        </div>
+        <div class="card" data-os="linux">
+          <h3>Linux</h3><p class="small">Debian, Ubuntu, Mint… · x64 &amp; ARM64</p>
+          <a class="btn primary" href="https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-linux-x64.deb">.deb x64</a>
+          <a class="btn" href="https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-linux-x64.tar.gz">.tar.gz x64</a>
+          <a class="btn" href="https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-linux-arm64.deb">.deb ARM64</a>
+          <a class="btn" href="https://github.com/jhordanleandro/AtlasDisco/releases/latest/download/AtlasDisco-linux-arm64.tar.gz">.tar.gz ARM64</a>
+        </div>
+        <div class="card soon" data-os="android">
+          <h3>Android</h3><p class="small"><span data-pt>Em desenvolvimento.</span><span data-en>In development.</span></p>
+          <a class="btn" href="https://github.com/jhordanleandro/AtlasDisco/issues"><span data-pt>Acompanhar</span><span data-en>Follow progress</span></a>
+        </div>
+      </div>
+      <p class="small" style="margin-top:20px">
+        <span data-pt>Os executáveis ainda não têm assinatura digital. No Windows, se o SmartScreen avisar, clique em “Mais informações → Executar assim mesmo”. No macOS, na primeira vez clique com o botão direito no app → Abrir.</span>
+        <span data-en>Binaries are not code-signed yet. On Windows, if SmartScreen warns you, click “More info → Run anyway”. On macOS, the first time right-click the app → Open.</span>
+        <a href="https://github.com/jhordanleandro/AtlasDisco/releases"><span data-pt>Todas as versões</span><span data-en>All releases</span></a>
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2><span data-pt>Para scripts e servidores</span><span data-en>For scripts and servers</span></h2>
+      <pre><code>atlasdisco-cli varrer D:\ --top 20 -e relatorio.xlsx --historico
+atlasdisco-cli duplicados D:\Fotos --min 100KB -e duplicados.xlsx
+atlasdisco-cli comparar ontem.atlas D:\ --profundidade 3
+atlasdisco-cli agendar diario --hora 03:00 -- varrer D:\ -e C:\Rel\D_{data}.xlsx</code></pre>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>AtlasDisco · <span data-pt>código aberto (MIT/Apache-2.0)</span><span data-en>open source (MIT/Apache-2.0)</span></span>
+    <span><a href="https://github.com/jhordanleandro/AtlasDisco">GitHub</a> · <a href="https://github.com/jhordanleandro/AtlasDisco/issues"><span data-pt>Relatar problema</span><span data-en>Report an issue</span></a> · <a href="https://github.com/jhordanleandro/AtlasDisco/blob/main/CONTRIBUTING.md"><span data-pt>Contribuir</span><span data-en>Contribute</span></a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var html = document.documentElement;
+  function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  var lang = get("lang") || ((navigator.language || "").toLowerCase().indexOf("pt") === 0 ? "pt-BR" : "en");
+  function apply() {
+    html.lang = lang;
+    document.getElementById("lang").textContent = lang === "en" ? "PT" : "EN";
+  }
+  apply();
+  document.getElementById("lang").addEventListener("click", function () {
+    lang = lang === "en" ? "pt-BR" : "en"; set("lang", lang); apply();
+  });
+
+  // Destaca o pacote do sistema de quem visita.
+  var ua = navigator.userAgent, os = /Android/i.test(ua) ? "android" : /Windows/i.test(ua) ? "windows" : /Mac/i.test(ua) ? "mac" : /Linux/i.test(ua) ? "linux" : "";
+  var names = { windows: "Windows", mac: "macOS", linux: "Linux", android: "Android" };
+  if (os) {
+    var card = document.querySelector('[data-os="' + os + '"]');
+    if (card) {
+      card.classList.add("me");
+      var t = document.createElement("span"); t.className = "tag"; t.textContent = "✓ " + names[os];
+      card.insertBefore(t, card.firstChild);
+      var first = card.querySelector("a.btn.primary");
+      if (first) document.getElementById("main-dl").href = first.href;
+      document.getElementById("main-os").textContent = "· " + names[os];
+    }
+  }
+
+  document.querySelectorAll(".tabs button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".tabs button").forEach(function (x) { x.setAttribute("aria-selected", x === b ? "true" : "false"); });
+      document.querySelectorAll(".gallery img").forEach(function (i) { i.classList.toggle("on", i.id === "g-" + b.dataset.img); });
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+[package]
+name = "atlasdisco"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Disk space analyzer: tree, treemap, duplicates, reports and snapshot comparison"
+
+[[bin]]
+name = "atlasdisco"
+path = "src/main.rs"
+
+[dependencies]
+atlasdisco-core.workspace = true
+chrono.workspace = true
+# x11/wayland: backends de janela no Linux (ignorados nos demais sistemas)
+eframe = { version = "0.31", default-features = false, features = ["default_fonts", "glow", "persistence", "x11", "wayland"] }
+egui_extras = "0.31"
+rfd = "0.15"
+serde.workspace = true
+serde_json.workspace = true
+png = "0.17"
+
+# Pacote .deb (cargo deb -p atlasdisco): leva a interface, a linha de comando, o atalho e o ícone.
+[package.metadata.deb]
+name = "atlasdisco"
+maintainer = "The AtlasDisco contributors"
+copyright = "2026, The AtlasDisco contributors"
+license-file = ["../../LICENSE-MIT", "0"]
+extended-description = "Open source disk space analyzer with folder tree, treemap, file types, age, largest files, duplicate finder, bulk operations, snapshot comparison and Excel/CSV/HTML/PDF/SQLite reports."
+section = "utils"
+priority = "optional"
+depends = "$auto, libgtk-3-0"
+assets = [
+    ["target/release/atlasdisco", "usr/bin/", "755"],
+    ["target/release/atlasdisco-cli", "usr/bin/", "755"],
+    ["../../assets/atlasdisco.desktop", "usr/share/applications/", "644"],
+    ["../../assets/atlasdisco.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+    ["../../README.md", "usr/share/doc/atlasdisco/", "644"],
+]

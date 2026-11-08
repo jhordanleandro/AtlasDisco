@@ -1,0 +1,160 @@
+# Ao publicar uma tag vX.Y.Z, compila para cada sistema e anexa os pacotes à Release.
+# Os nomes dos arquivos não levam versão, para a página usar /releases/latest/download/<arquivo>.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag existente para (re)compilar, ex.: v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Criar a Release (rascunho até os pacotes chegarem)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "AtlasDisco $TAG" --notes-file CHANGELOG.md --draft
+
+  windows:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-pc-windows-msvc, name: windows-x64 }
+          - { target: aarch64-pc-windows-msvc, name: windows-arm64 }
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Empacotar
+        shell: pwsh
+        run: |
+          $d = "AtlasDisco-${{ matrix.name }}"
+          New-Item -ItemType Directory $d | Out-Null
+          Copy-Item target/${{ matrix.target }}/release/atlasdisco.exe, target/${{ matrix.target }}/release/atlasdisco-cli.exe, README.md, LICENSE-MIT, LICENSE-APACHE $d
+          New-Item "$d/portatil.txt" -Value "Apague este arquivo para guardar as configurações no perfil do usuário em vez desta pasta." | Out-Null
+          Compress-Archive -Path "$d/*" -DestinationPath "$d.zip"
+      - name: Anexar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ env.TAG }}" "AtlasDisco-${{ matrix.name }}.zip" --clobber
+
+  linux:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu, name: linux-x64, deb: amd64 }
+          - { os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, name: linux-arm64, deb: arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxkbcommon-dev libwayland-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - run: cargo build --release --locked
+      - name: Empacotar .tar.gz
+        run: |
+          d=AtlasDisco-${{ matrix.name }}
+          mkdir $d
+          cp target/release/atlasdisco target/release/atlasdisco-cli README.md LICENSE-MIT LICENSE-APACHE assets/atlasdisco.desktop assets/atlasdisco.svg $d/
+          tar czf $d.tar.gz $d
+      - name: Empacotar .deb
+        run: |
+          cargo install cargo-deb --locked
+          cargo deb -p atlasdisco --no-build --output AtlasDisco-${{ matrix.name }}.deb
+      - name: Anexar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" AtlasDisco-${{ matrix.name }}.tar.gz AtlasDisco-${{ matrix.name }}.deb --clobber
+
+  macos:
+    needs: release
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - name: Compilar (Apple Silicon e Intel)
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
+      - name: App universal + DMG
+        run: |
+          set -e
+          VERSION="${TAG#v}"
+          APP=AtlasDisco.app
+          mkdir -p $APP/Contents/MacOS $APP/Contents/Resources
+          for b in atlasdisco atlasdisco-cli; do
+            lipo -create -output $APP/Contents/MacOS/$b target/aarch64-apple-darwin/release/$b target/x86_64-apple-darwin/release/$b
+          done
+          # Ícone .icns a partir do SVG
+          mkdir icon.iconset
+          for s in 16 32 64 128 256 512; do
+            sips -s format png -z $s $s assets/atlasdisco.svg --out icon.iconset/icon_${s}x${s}.png >/dev/null 2>&1 || true
+          done
+          iconutil -c icns icon.iconset -o $APP/Contents/Resources/atlasdisco.icns || true
+          cat > $APP/Contents/Info.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>CFBundleName</key><string>AtlasDisco</string>
+            <key>CFBundleDisplayName</key><string>AtlasDisco</string>
+            <key>CFBundleIdentifier</key><string>io.github.atlasdisco</string>
+            <key>CFBundleExecutable</key><string>atlasdisco</string>
+            <key>CFBundleIconFile</key><string>atlasdisco</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>${VERSION}</string>
+            <key>CFBundleVersion</key><string>${VERSION}</string>
+            <key>LSMinimumSystemVersion</key><string>11.0</string>
+            <key>NSHighResolutionCapable</key><true/>
+          </dict></plist>
+          EOF
+          sed -i '' 's/^          //' $APP/Contents/Info.plist
+          codesign --force --deep --sign - $APP
+          mkdir dmg && cp -R $APP dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname AtlasDisco -srcfolder dmg -ov -format UDZO AtlasDisco-macos-universal.dmg
+          d=AtlasDisco-macos-universal-cli
+          mkdir $d && cp $APP/Contents/MacOS/atlasdisco-cli README.md LICENSE-MIT LICENSE-APACHE $d/
+          tar czf $d.tar.gz $d
+      - name: Anexar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" AtlasDisco-macos-universal.dmg AtlasDisco-macos-universal-cli.tar.gz --clobber
+
+  publish:
+    needs: [windows, linux, macos]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publicar a Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$TAG" --draft=false --latest
