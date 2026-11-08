@@ -1076,60 +1076,65 @@ fn search_tab(app: &mut App, ui: &mut egui::Ui, base: &Path, acts: &mut Vec<Act>
             s.max = "0".into()
         });
     });
-    egui::Grid::new("busca")
-        .num_columns(4)
-        .spacing([10.0, 6.0])
+    // Em tela estreita o formulário rola na horizontal.
+    egui::ScrollArea::horizontal()
+        .id_salt("busca-h")
         .show(ui, |ui| {
-            let s = &mut app.search;
-            ui.label("Nome");
-            ui.add(egui::TextEdit::singleline(&mut s.name).hint_text("*.iso;backup*"));
-            ui.checkbox(&mut s.crit.regex, "Expressão regular");
-            egui::ComboBox::from_id_salt("tipo")
-                .selected_text(match s.crit.kind {
-                    Kind::Files => "Arquivos",
-                    Kind::Folders => "Pastas",
-                    Kind::Both => "Arquivos e pastas",
-                })
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut s.crit.kind, Kind::Files, "Arquivos");
-                    ui.selectable_value(&mut s.crit.kind, Kind::Folders, "Pastas");
-                    ui.selectable_value(&mut s.crit.kind, Kind::Both, "Arquivos e pastas");
+            egui::Grid::new("busca")
+                .num_columns(4)
+                .spacing([10.0, 6.0])
+                .show(ui, |ui| {
+                    let s = &mut app.search;
+                    ui.label("Nome");
+                    ui.add(egui::TextEdit::singleline(&mut s.name).hint_text("*.iso;backup*"));
+                    ui.checkbox(&mut s.crit.regex, "Expressão regular");
+                    egui::ComboBox::from_id_salt("tipo")
+                        .selected_text(match s.crit.kind {
+                            Kind::Files => "Arquivos",
+                            Kind::Folders => "Pastas",
+                            Kind::Both => "Arquivos e pastas",
+                        })
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut s.crit.kind, Kind::Files, "Arquivos");
+                            ui.selectable_value(&mut s.crit.kind, Kind::Folders, "Pastas");
+                            ui.selectable_value(&mut s.crit.kind, Kind::Both, "Arquivos e pastas");
+                        });
+                    ui.end_row();
+                    ui.label("Tamanho mínimo");
+                    ui.add(egui::TextEdit::singleline(&mut s.min).hint_text("ex.: 50 MB"));
+                    ui.label("máximo");
+                    ui.add(egui::TextEdit::singleline(&mut s.max).hint_text("ex.: 2 GB"));
+                    ui.end_row();
+                    ui.label("Mais antigo que (dias)");
+                    ui.text_edit_singleline(&mut s.older);
+                    ui.label("mais novo que (dias)");
+                    ui.text_edit_singleline(&mut s.newer);
+                    ui.end_row();
+                    ui.label("Data considerada");
+                    egui::ComboBox::from_id_salt("data")
+                        .selected_text(
+                            ["Modificação", "Último acesso", "Criação"]
+                                [s.crit.date_kind_code.min(2) as usize],
+                        )
+                        .show_ui(ui, |ui| {
+                            for (k, l) in ["Modificação", "Último acesso", "Criação"]
+                                .iter()
+                                .enumerate()
+                            {
+                                ui.selectable_value(&mut s.crit.date_kind_code, k as u8, *l);
+                            }
+                        });
+                    ui.label("Caminho com ≥ caracteres");
+                    ui.text_edit_singleline(&mut s.pathlen);
+                    ui.end_row();
+                    ui.label("Caminho contém");
+                    ui.text_edit_singleline(&mut s.crit.path_contains);
+                    ui.label("Texto no conteúdo");
+                    ui.text_edit_singleline(&mut s.crit.content);
+                    ui.end_row();
                 });
-            ui.end_row();
-            ui.label("Tamanho mínimo");
-            ui.add(egui::TextEdit::singleline(&mut s.min).hint_text("ex.: 50 MB"));
-            ui.label("máximo");
-            ui.add(egui::TextEdit::singleline(&mut s.max).hint_text("ex.: 2 GB"));
-            ui.end_row();
-            ui.label("Mais antigo que (dias)");
-            ui.text_edit_singleline(&mut s.older);
-            ui.label("mais novo que (dias)");
-            ui.text_edit_singleline(&mut s.newer);
-            ui.end_row();
-            ui.label("Data considerada");
-            egui::ComboBox::from_id_salt("data")
-                .selected_text(
-                    ["Modificação", "Último acesso", "Criação"]
-                        [s.crit.date_kind_code.min(2) as usize],
-                )
-                .show_ui(ui, |ui| {
-                    for (k, l) in ["Modificação", "Último acesso", "Criação"]
-                        .iter()
-                        .enumerate()
-                    {
-                        ui.selectable_value(&mut s.crit.date_kind_code, k as u8, *l);
-                    }
-                });
-            ui.label("Caminho com ≥ caracteres");
-            ui.text_edit_singleline(&mut s.pathlen);
-            ui.end_row();
-            ui.label("Caminho contém");
-            ui.text_edit_singleline(&mut s.crit.path_contains);
-            ui.label("Texto no conteúdo");
-            ui.text_edit_singleline(&mut s.crit.content);
-            ui.end_row();
         });
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         if ui.button(RichText::new("🔎 Buscar").strong()).clicked() {
             app.run_search();
         }
@@ -1337,7 +1342,7 @@ fn hits_table(
 
 fn dup_tab(app: &mut App, ui: &mut egui::Ui, base: &Path, acts: &mut Vec<Act>) {
     ui.label(RichText::new(format!("Procura dentro de: {}", base.display())).weak());
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.label("Tamanho mínimo");
         ui.add(egui::TextEdit::singleline(&mut app.dup.min).desired_width(80.0));
         ui.label("Comparar por");
@@ -1353,7 +1358,7 @@ fn dup_tab(app: &mut App, ui: &mut egui::Ui, base: &Path, acts: &mut Vec<Act>) {
     });
     let hits = std::mem::take(&mut app.dup.hits);
     let mut marked = std::mem::take(&mut app.dup.marked);
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         if ui.button("Marcar cópias (manter o mais antigo de cada grupo)").clicked() {
             mark_copies(&hits, &mut marked);
         }
@@ -1377,13 +1382,15 @@ fn dup_tab(app: &mut App, ui: &mut egui::Ui, base: &Path, acts: &mut Vec<Act>) {
     app.dup.marked = marked;
 }
 
-/// Em cada grupo, marca todos menos o arquivo mais antigo.
+/// Em cada grupo, marca todos menos um: o mais antigo; no empate, o de caminho mais curto (o "original").
 fn mark_copies(hits: &[search::Hit], marked: &mut [bool]) {
-    let mut keep: std::collections::HashMap<usize, (i64, usize)> = Default::default();
+    let key = |h: &search::Hit| (h.mtime, h.level, h.path.as_os_str().len());
+    let mut keep: std::collections::HashMap<usize, ((i64, usize, usize), usize)> =
+        Default::default();
     for (i, h) in hits.iter().enumerate() {
-        let e = keep.entry(h.group).or_insert((h.mtime, i));
-        if h.mtime < e.0 {
-            *e = (h.mtime, i);
+        let e = keep.entry(h.group).or_insert((key(h), i));
+        if key(h) < e.0 {
+            *e = (key(h), i);
         }
     }
     for (i, h) in hits.iter().enumerate() {

@@ -1,3 +1,11 @@
+## AtlasDisco 0.2.1
+
+Fixes found while testing on a real phone (Motorola, Android 16):
+- Phone layout: tabs become a one-line selector, so results have room; duplicate and search controls wrap instead of going off-screen
+- Android menu no longer shows desktop-only items (choose folder, schedule, new window); path hint adapted
+- Duplicate auto-marking: on equal dates, keeps the file with the shortest path (the "original")
+- Decimal comma in timing messages; desktop toolbar back on a single line
+
 ## AtlasDisco 0.2.0 — Android
 
 - **Android 8+ app** (APK): same interface as the desktop, adapted to phones (folder tab, larger touch targets, system bars and on-screen keyboard)

@@ -700,8 +700,11 @@ impl App {
                     match r {
                         BgResult::Owners(o) => self.owners = Some(o),
                         BgResult::Search(Ok(h)) => {
-                            self.status =
-                                format!("{} resultados em {secs:.1} s", fmt::int(h.len() as i64));
+                            self.status = format!(
+                                "{} resultados em {} s",
+                                fmt::int(h.len() as i64),
+                                fmt::dec_br(secs as f64, 1)
+                            );
                             self.search.marked = vec![false; h.len()];
                             self.search.hits = h;
                         }
@@ -711,8 +714,11 @@ impl App {
                             self.dup.wasted = g.iter().map(|x| search::wasted(x)).sum();
                             self.dup.hits = g.into_iter().flatten().collect();
                             self.dup.marked = vec![false; self.dup.hits.len()];
-                            self.status =
-                                format!("{} grupos de duplicados em {secs:.1} s", self.dup.groups);
+                            self.status = format!(
+                                "{} grupos de duplicados em {} s",
+                                self.dup.groups,
+                                fmt::dec_br(secs as f64, 1)
+                            );
                         }
                         BgResult::Ops(what, rep, paths) => {
                             let failed: Vec<PathBuf> =
@@ -765,7 +771,7 @@ impl App {
     fn menus(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, acts: &mut Vec<Act>) {
         egui::menu::bar(ui, |ui| {
             ui.menu_button("Arquivo", |ui| {
-                if ui.button("Escolher pasta…").clicked() {
+                if cfg!(not(target_os = "android")) && ui.button("Escolher pasta…").clicked() {
                     ui.close_menu();
                     if let Some(p) = rfd::FileDialog::new().pick_folder() {
                         acts.push(Act::Scan(p));
@@ -845,12 +851,12 @@ impl App {
                     });
                 });
                 ui.separator();
-                if ui.button("Agendar varredura…").clicked() {
+                if cfg!(not(target_os = "android")) && ui.button("Agendar varredura…").clicked() {
                     ui.close_menu();
                     self.sched.path = self.path_input.clone();
                     self.show_schedule = true;
                 }
-                if ui.button("Nova janela").clicked() {
+                if cfg!(not(target_os = "android")) && ui.button("Nova janela").clicked() {
                     ui.close_menu();
                     if let Ok(exe) = std::env::current_exe() {
                         let _ = std::process::Command::new(exe).spawn();
@@ -1007,12 +1013,16 @@ impl App {
             let w = if self.compact {
                 ui.available_width().max(160.0)
             } else {
-                (ui.available_width() - 520.0).max(200.0)
+                (ui.available_width() - 600.0).max(200.0)
             };
             let r = ui.add(
                 egui::TextEdit::singleline(&mut self.path_input)
                     .desired_width(w)
-                    .hint_text("Pasta, unidade ou caminho de rede (\\\\servidor\\pasta)"),
+                    .hint_text(if cfg!(target_os = "android") {
+                        "Pasta, ex.: /storage/emulated/0/Download"
+                    } else {
+                        "Pasta, unidade ou caminho de rede (\\\\servidor\\pasta)"
+                    }),
             );
             let enter = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
             let scanning = self.job.is_some();
@@ -1387,14 +1397,32 @@ impl eframe::App for App {
                 });
         }
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                if compact {
-                    ui.selectable_value(&mut self.tab, Tab::Folders, "Pastas");
-                }
-                for (t, l) in Tab::ALL {
-                    ui.selectable_value(&mut self.tab, t, l);
-                }
-            });
+            if compact {
+                // Celular: uma linha só, para sobrar espaço para os resultados.
+                let current = if self.tab == Tab::Folders {
+                    "Pastas"
+                } else {
+                    Tab::ALL.iter().find(|(t, _)| *t == self.tab).map(|(_, l)| *l).unwrap_or("")
+                };
+                ui.horizontal(|ui| {
+                    ui.label("Ver:");
+                    egui::ComboBox::from_id_salt("aba")
+                        .selected_text(RichText::new(current).strong())
+                        .width(ui.available_width() - 8.0)
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut self.tab, Tab::Folders, "Pastas");
+                            for (t, l) in Tab::ALL {
+                                ui.selectable_value(&mut self.tab, t, l);
+                            }
+                        });
+                });
+            } else {
+                ui.horizontal_wrapped(|ui| {
+                    for (t, l) in Tab::ALL {
+                        ui.selectable_value(&mut self.tab, t, l);
+                    }
+                });
+            }
             ui.separator();
             match scan.as_deref() {
                 Some(s) => views::central(self, ui, s, &mut acts),
